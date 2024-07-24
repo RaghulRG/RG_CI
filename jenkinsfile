@@ -1,0 +1,37 @@
+pipeline {
+    agent {
+        node {
+            label 'u22-ec2'
+        }
+    }
+    tools {
+        maven 'maven3'
+        //jdk17
+    }
+    stages {
+        stage('clone project from github') {
+            steps {
+                git branch: 'main', changelog: true, poll: false, url: 'https://github.com/Aj7Ay/Petclinic-Real.git'
+            }
+        }
+        stage('build war file') {
+            steps {
+                script {
+                    sh """
+                        cd $WORKSPACE
+                        mvn clean package -Dmaven.test.skip=true
+                    """
+                }
+            }
+        }
+        stage('build docker container and copy war file') {
+            steps {
+                sh """
+                    docker run -it -d --name petclinic -p 9080:8080 tomcat:9.0.52
+                    docker cp $WORKSPACE/target/petclinic.war petclinic:/usr/local/tomcat/webapps
+                """
+            }
+        }
+    }
+}
+
